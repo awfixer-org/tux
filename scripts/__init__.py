@@ -7,13 +7,13 @@ with proper separation of concerns and extensibility.
 
 from scripts.base import BaseCLI
 from scripts.config import ConfigCLI
-from scripts.cursor import CursorCLI
 from scripts.db import DatabaseCLI
 from scripts.dev import DevCLI
 from scripts.docker_cli import DockerCLI
 from scripts.docs import DocsCLI
 from scripts.registry import Command, CommandGroup, CommandRegistry
 from scripts.rich_utils import RichCLI
+from scripts.rules import RulesCLI
 from scripts.test import TestCLI
 from scripts.tux import TuxCLI
 
@@ -23,7 +23,7 @@ __all__ = [
     "CommandGroup",
     "CommandRegistry",
     "ConfigCLI",
-    "CursorCLI",
+    "RulesCLI",
     "DatabaseCLI",
     "DevCLI",
     "DockerCLI",
