@@ -20,6 +20,9 @@ from scripts.ui import (
 
 app = create_app()
 
+# Constants
+YAML_FRONTMATTER_PARTS = 3
+
 
 @app.command(name="lint")
 def lint() -> None:
@@ -47,7 +50,7 @@ def lint() -> None:
                 # Skip YAML frontmatter if present
                 if content.startswith("---"):
                     parts = content.split("---", 2)
-                    if len(parts) >= 3:
+                    if len(parts) >= YAML_FRONTMATTER_PARTS:
                         content = parts[2].strip()
                 else:
                     content = content.strip()
@@ -58,7 +61,7 @@ def lint() -> None:
                     issues.append(f"Missing title: {md_file}")
                 elif "TODO" in content.upper() or "FIXME" in content.upper():
                     issues.append(f"Contains TODO/FIXME: {md_file}")
-            except Exception as e:
+            except (UnicodeDecodeError, OSError) as e:
                 issues.append(f"Could not read {md_file}: {e}")
 
             progress.advance(task)

@@ -1,9 +1,10 @@
+
 <!-- markdownlint-disable MD041 -->
 
 <div align="center">
     <p align="center">
         <a href="https://github.com/allthingslinux/tux/releases">
-            <img alt="GitHub Release" src="https://img.shields.io/github/v/release/allthingslinux/tux?logo=github&logoColor=white"></a>
+            <img alt="GitHub Release" src="https://img.shields.io/github/v/release/allthingslinux/tux?logo=github&logoColor=white&include_prereleases"></a>
         <a href="https://python.org">
             <img alt="Python" src="https://img.shields.io/badge/python-3.13.2+-blue?logo=python&logoColor=white"></a>
         <a href="https://docs.astral.sh/uv">
@@ -21,13 +22,16 @@
 
 <div align="center">
     <h1>Tux</h1>
-    <p><strong>The all-in-one open source Discord bot for Linux communities</strong></p>
+    <p><strong>The all-in-one open source Discord bot</strong></p>
     <p>
         <a href="https://tux.atl.dev">📚 Documentation</a> •
         <a href="https://discord.gg/gpmSjcjQxg">💬 Discord</a> •
         <a href="https://github.com/allthingslinux/tux/issues/525">🗺️ Roadmap</a>
     </p>
 </div>
+
+> [!WARNING]
+> **This codebase is under heavy development and subject to breaking changes.** APIs, configurations, and features may change without notice. Use at your own risk in production environments. Until v0.1.0 is released, the documentation is not guaranteed to be accurate or up to date.
 
 ---
 
@@ -115,6 +119,4 @@ Visit **[tux.atl.dev](https://tux.atl.dev)** for complete documentation includin
 
 Tux is free and open source software licensed under the [GNU General Public License v3.0](LICENSE).
 
-Founded by [@kzndotsh](https://github.com/kzndotsh) • Maintained by the [All Things Linux](https://allthingslinux.org) community
-
----
+Created by [@kzndotsh](https://github.com/kzndotsh) • Maintained by the [All Things Linux](https://allthingslinux.org) community

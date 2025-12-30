@@ -8,17 +8,20 @@ automatic case numbering, status tracking, and audit logging for Discord guilds.
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from loguru import logger
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import noload
 
 from tux.database.controllers.base import BaseController
 from tux.database.models import Case, Guild
 from tux.database.models.enums import CaseType as DBCaseType
-from tux.database.service import DatabaseService
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
+
+    from tux.database.service import DatabaseService
 
 
 class CaseController(BaseController[Case]):
@@ -176,12 +179,12 @@ class CaseController(BaseController[Case]):
             case_data.update(kwargs)
 
             # Create the case
-            logger.debug(f"Creating Case object with data: {case_data}")
+            logger.trace(f"Creating Case object with data: {case_data}")
             case = Case(**case_data)
             session.add(case)
             await session.flush()
             await session.refresh(case)
-            logger.info(
+            logger.success(
                 f"Case created successfully: ID={case.id}, number={case.case_number}, expires_at={case.case_expires_at}",
             )
             return case
@@ -271,16 +274,25 @@ class CaseController(BaseController[Case]):
             filters=(Case.guild_id == guild_id) & (Case.case_type == case_type),
         )
 
-    async def get_recent_cases(self, guild_id: int, hours: int = 24) -> list[Case]:
+    async def get_recent_cases(self, guild_id: int) -> list[Case]:
         """
-        Get cases created within the last N hours.
+        Get cases for a guild.
+
+        Parameters
+        ----------
+        guild_id : int
+            The guild ID to filter cases by.
 
         Returns
         -------
         list[Case]
-            List of recent cases.
+            List of cases for the guild.
+
+        Notes
+        -----
+        Time-based filtering is not yet implemented as the Case model lacks
+        a created_at field. This currently returns all cases for the guild.
         """
-        # For now, just get all cases in the guild since we don't have a created_at field
         return await self.find_all(filters=Case.guild_id == guild_id)
 
     async def get_case_count_by_guild(self, guild_id: int) -> int:
@@ -320,7 +332,7 @@ class CaseController(BaseController[Case]):
         # For now, just check if user has any active cases
         # In the future, you can implement specific restriction type checking
         active_cases = await self.get_active_cases_by_user(user_id, guild_id)
-        return len(active_cases) > 0
+        return bool(active_cases)
 
     async def get_case_by_number(self, case_number: int, guild_id: int) -> Case | None:
         """
@@ -412,14 +424,12 @@ class CaseController(BaseController[Case]):
         Case | None
             The most recent case if found, None otherwise.
         """
-        cases = await self.find_all(
-            filters=(Case.case_user_id == user_id) & (Case.guild_id == guild_id),
-        )
+        # Use database-level sorting for better performance
         # Sort by ID descending (assuming higher ID = newer case) and return the first one
-        if cases:
-            sorted_cases = sorted(cases, key=lambda x: x.id or 0, reverse=True)
-            return sorted_cases[0]
-        return None
+        return await self.find_one(
+            filters=(Case.case_user_id == user_id) & (Case.guild_id == guild_id),
+            order_by=[Case.id.desc()],  # type: ignore[attr-defined]
+        )
 
     async def set_tempban_expired(
         self,
@@ -429,16 +439,16 @@ class CaseController(BaseController[Case]):
         """
         Mark a tempban case as processed after the user has been unbanned.
 
-        This sets case_processed=True to indicate the expiration has been handled.
-        The case_status remains True (the case is still valid, just completed).
-        The case_expires_at field remains unchanged as a historical record.
-
         Parameters
         ----------
         case_id : int
-            The ID of the case to mark as processed
-        guild_id : int | None
-            Deprecated parameter kept for backward compatibility (unused)
+            The case ID to mark as expired.
+        guild_id : int | None, optional
+            The guild ID (currently unused, kept for API consistency).
+
+        This sets case_processed=True to indicate the expiration has been handled.
+        The case_status remains True (the case is still valid, just completed).
+        The case_expires_at field remains unchanged as a historical record.
 
         Returns
         -------
@@ -467,7 +477,7 @@ class CaseController(BaseController[Case]):
             case_processed=False, and case_status=True.
         """
         now = datetime.now(UTC)
-        logger.debug(
+        logger.trace(
             f"Checking for unprocessed expired tempbans in guild {guild_id}, current time: {now}",
         )
 
@@ -484,13 +494,20 @@ class CaseController(BaseController[Case]):
             ),
         )
 
-        logger.debug(
-            f"Found {len(expired_cases)} unprocessed expired tempbans in guild {guild_id}",
-        )
-        for case in expired_cases:
-            logger.debug(
-                f"Unprocessed expired tempban: case_id={case.id}, user={case.case_user_id}, "
-                f"expires_at={case.case_expires_at}, processed={case.case_processed}",
+        if expired_cases:
+            # Only log if we found expired cases (INFO for actual work being done)
+            logger.info(
+                f"Found {len(expired_cases)} unprocessed expired tempbans in guild {guild_id}",
+            )
+            for case in expired_cases:
+                logger.debug(
+                    f"Unprocessed expired tempban: case_id={case.id}, user={case.case_user_id}, "
+                    f"expires_at={case.case_expires_at}, processed={case.case_processed}",
+                )
+        else:
+            # TRACE for routine checks that find nothing
+            logger.trace(
+                f"No unprocessed expired tempbans found in guild {guild_id}",
             )
 
         return expired_cases

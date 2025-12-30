@@ -86,10 +86,10 @@ class BaseCog(commands.Cog):
                 # Generate usage from command signature and type hints
                 command.usage = self._generate_usage(command)
 
-        except Exception as e:
+        except Exception:
             # Log but don't crash - cog can still load without usage strings
-            logger.debug(
-                f"Failed to setup command usage for {self.__class__.__name__}: {e}",
+            logger.exception(
+                f"Failed to setup command usage for {self.__class__.__name__}",
             )
 
     def _generate_usage(self, command: commands.Command[Any, ..., Any]) -> str:
@@ -133,6 +133,9 @@ class BaseCog(commands.Cog):
 
         except Exception:
             # If signature inspection fails, fall back to minimal usage
+            logger.trace(
+                f"Signature inspection failed for {command.qualified_name}, using fallback",
+            )
             return command.qualified_name
 
         # Delegate to shared usage generator for consistent formatting
@@ -140,6 +143,9 @@ class BaseCog(commands.Cog):
             return generate_usage(command, flag_converter)
         except Exception:
             # Final fallback: just return the command name
+            logger.trace(
+                f"Usage generation failed for {command.qualified_name}, using fallback",
+            )
             return command.qualified_name
 
     @property
@@ -200,9 +206,9 @@ class BaseCog(commands.Cog):
                 else:
                     return default
 
-        except Exception as e:
+        except Exception:
             # Log error but return default gracefully
-            logger.error(f"Failed to get config value {key}: {e}")
+            logger.exception(f"Failed to get config value {key}")
             return default
         else:
             return value
@@ -219,7 +225,7 @@ class BaseCog(commands.Cog):
         bot_user = getattr(self.bot, "user", "Unknown")
         return f"<{self.__class__.__name__} bot={bot_user}>"
 
-    def unload_if_missing_config(self, condition: bool, config_name: str) -> bool:
+    def unload_if_missing_config(self, *, condition: bool, config_name: str) -> bool:
         """
         Check if required configuration is missing and log warning.
 
@@ -245,7 +251,8 @@ class BaseCog(commands.Cog):
         >>> def __init__(self, bot: Tux):
         ...     super().__init__(bot)
         ...     if self.unload_if_missing_config(
-        ...         not CONFIG.GITHUB_TOKEN, "GITHUB_TOKEN"
+        ...         condition=not CONFIG.GITHUB_TOKEN,
+        ...         config_name="GITHUB_TOKEN",
         ...     ):
         ...         return  # Exit early, cog will be partially loaded
         ...     self.github_client = GitHubClient()
@@ -287,5 +294,5 @@ class BaseCog(commands.Cog):
             logger.info(
                 f"{self.__class__.__name__} unloaded due to missing configuration",
             )
-        except Exception as e:
-            logger.error(f"Failed to unload {self.__class__.__name__}: {e}")
+        except Exception:
+            logger.exception(f"Failed to unload {self.__class__.__name__}")
